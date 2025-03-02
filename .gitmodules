@@ -1,0 +1,6 @@
+[submodule "libwwwslide"]
+	path = libwwwslide
+	url = git@github.com:nicolasbrailo/libwwwslide.git
+[submodule "rpiz-xcompile"]
+	path = rpiz-xcompile
+	url = git@github.com:nicolasbrailo/rpiz-xcompile.git
