@@ -1,4 +1,6 @@
-#include "wwwslider.h"
+#include "libeink/eink.h"
+#include "libwwwslide/wwwslider.h"
+#include "shm.h"
 
 #include <fcntl.h>
 #include <signal.h>
@@ -29,7 +31,20 @@ void on_image_received(const void *img_ptr, size_t img_sz, const char *meta_ptr,
   }
 }
 
-int main() {
+
+int main(int argc, const char** argv) {
+  struct ShmHandle* h = shm_init("my_shared_memory", /*max_sz_bytes=*/20 * 1024 * 1024);
+  if (!h) {
+    printf("XXXXXXXXXXX\n");
+    return 0;
+  }
+  if (shm_update_from_file(h, argv[1]) <= 0) {
+    printf("Failed to update shm\n");
+  }
+  shm_free(h);
+
+
+#if 0
   if (signal(SIGINT, handle_user_intr) == SIG_ERR) {
     fprintf(stderr, "Error setting up signal handler\n");
     return 1;
@@ -65,5 +80,6 @@ int main() {
   }
 
   wwwslider_free(slider);
+#endif
   return 0;
 }

@@ -4,3 +4,6 @@
 [submodule "rpiz-xcompile"]
 	path = rpiz-xcompile
 	url = git@github.com:nicolasbrailo/rpiz-xcompile.git
+[submodule "libeink"]
+	path = libeink
+	url = git@github.com:nicolasbrailo/libeink.git

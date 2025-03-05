@@ -7,28 +7,34 @@ XCOMPILE=\
 # Uncomment to build to local target:
 XCOMPILE=
 
+INCLUDES= \
+	-I. \
+	-I./libeink \
+	-I./libwwwslide \
+
+# TODO lgGpio doesn't build with these
+#	-Wformat=2 \
+#	-Wextra \
+#	-Wpedantic  \
 
 CFLAGS= \
 	$(XCOMPILE) \
+	$(INCLUDES) \
 	-fdiagnostics-color=always \
 	-ffunction-sections -fdata-sections \
 	-ggdb -O0 \
-	-I.
 	-std=gnu99 \
 	-Wall -Werror \
 	-Wendif-labels \
-	-Wextra \
 	-Wfloat-equal \
-	-Wformat=2 \
 	-Wimplicit-fallthrough \
 	-Winit-self \
 	-Winvalid-pch \
 	-Wmissing-field-initializers \
 	-Wmissing-include-dirs \
-	-Wno-strict-prototypes \
 	-Wno-unused-function \
 	-Woverflow \
-	-Wpedantic  \
+	-Wno-strict-prototypes \
 	-Wpointer-arith \
 	-Wredundant-decls \
 	-Wstrict-aliasing=2 \
@@ -36,11 +42,20 @@ CFLAGS= \
 	-Wuninitialized \
 
 
-LDFLAGS=-Wl,--gc-sections -lcurl
+LDFLAGS=-Wl,--gc-sections -lcurl -lcairo
 
-example: \
-		build/example.o \
-		build/wwwslider.o
+homeboard_ambience: \
+		build/libwwwslide/wwwslider.o \
+		build/libeink/liblgpio/lgCtx.o \
+		build/libeink/liblgpio/lgDbg.o \
+		build/libeink/liblgpio/lgGpio.o \
+		build/libeink/liblgpio/lgHdl.o \
+		build/libeink/liblgpio/lgPthAlerts.o \
+		build/libeink/liblgpio/lgPthTx.o \
+		build/libeink/liblgpio/lgSPI.o \
+		build/libeink/libeink/eink.o \
+		build/shm.o \
+		build/main.o
 	clang $(CFLAGS) $(LDFLAGS) $^ -o $@
 
 clean:
@@ -59,6 +74,7 @@ xcompile-end:
 	./rpiz-xcompile/umount_rpy_root.sh ~/src/xcomp-rpiz-env
 
 install_sysroot_deps:
+	./rpiz-xcompile/add_sysroot_pkg.sh ~/src/xcomp-rpiz-env http://archive.raspberrypi.com/debian/pool/main/c/cairo/libcairo2-dev_1.16.0-7+rpt1_armhf.deb
 	./rpiz-xcompile/add_sysroot_pkg.sh ~/src/xcomp-rpiz-env http://raspbian.raspberrypi.com/raspbian/pool/main/c/curl/libcurl4-openssl-dev_7.88.1-10+rpi1+deb12u8_armhf.deb
 
 .PHONY: deploy run
@@ -66,5 +82,4 @@ deploy: example
 	scp eink StoneBakedMargheritaHomeboard:/home/batman/example
 run: deploy
 	ssh StoneBakedMargheritaHomeboard /home/batman/example
-
 
