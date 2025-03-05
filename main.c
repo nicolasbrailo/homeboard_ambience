@@ -2,16 +2,15 @@
 #include "libwwwslide/wwwslider.h"
 #include "shm.h"
 
-#include <fcntl.h>
 #include <signal.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <termios.h>
 #include <unistd.h>
 
 atomic_bool g_user_intr = false;
+struct ShmHandle* gShm = NULL;
 
 void handle_user_intr(int sig) { g_user_intr = true; }
 
@@ -20,39 +19,27 @@ void on_image_received(const void *img_ptr, size_t img_sz, const char *meta_ptr,
   printf("Received new image%s%s\n", meta_ptr ? ": " : "",
          meta_ptr ? meta_ptr : "");
 
-  FILE *fp = fopen("/home/batman/Downloads/img.jpg", "wb");
-  fwrite(img_ptr, 1, img_sz, fp);
-  fclose(fp);
-
-  if (qr_ptr) {
-    fp = fopen("/home/batman/Downloads/imgqr.jpg", "wb");
-    fwrite(qr_ptr, 1, qr_sz, fp);
-    fclose(fp);
+  if (shm_update(gShm, img_ptr, img_sz) <= 0) {
+    fprintf(stderr, "Failed to update shm with received image\n");
   }
 }
 
 
 int main(int argc, const char** argv) {
-  struct ShmHandle* h = shm_init("my_shared_memory", /*max_sz_bytes=*/20 * 1024 * 1024);
-  if (!h) {
-    printf("XXXXXXXXXXX\n");
-    return 0;
-  }
-  if (shm_update_from_file(h, argv[1]) <= 0) {
-    printf("Failed to update shm\n");
-  }
-  shm_free(h);
-
-
-#if 0
   if (signal(SIGINT, handle_user_intr) == SIG_ERR) {
     fprintf(stderr, "Error setting up signal handler\n");
     return 1;
   }
 
+  gShm = shm_init("ambience_img", /*max_sz_bytes=*/20 * 1024 * 1024);
+  if (!gShm) {
+    fprintf(stderr, "Failed to init image storage, check shm settings\n");
+    return 1;
+  }
+
   struct WwwSliderConfig cfg = {
-      .target_width = 300,
-      .target_height = 200,
+      .target_width = 640,
+      .target_height = 480,
       .embed_qr = false,
       .request_standalone_qr = true,
       .request_metadata = true,
@@ -60,26 +47,20 @@ int main(int argc, const char** argv) {
       .on_image_available = on_image_received,
   };
   struct WwwSlider *slider = wwwslider_init("http://bati.casa:5000", cfg);
-
   if (!slider || !wwwslider_wait_registered(slider)) {
-    fprintf(stderr, "Fail to register\n");
+    fprintf(stderr, "Fail to register with image service\n");
     return 1;
   }
 
-  wwwslider_get_next_image(slider);
-
   while (!g_user_intr) {
-    int ch = getchar();
-    if (ch == 'a') {
-      printf("Previous image requested.\n");
-      wwwslider_get_prev_image(slider);
-    } else if (ch == 'd') {
-      wwwslider_get_next_image(slider);
-      printf("Next image requested.\n");
-    }
+    printf("Requesting next image\n");
+    wwwslider_get_next_image(slider);
+    // TODO wwwslider_get_prev_image(slider);
+    sleep(10);
   }
 
+  shm_free(gShm);
   wwwslider_free(slider);
-#endif
+
   return 0;
 }

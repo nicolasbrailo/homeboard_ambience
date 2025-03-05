@@ -5,7 +5,7 @@ XCOMPILE=\
 	 --sysroot $(SYSROOT)
 
 # Uncomment to build to local target:
-XCOMPILE=
+# XCOMPILE=
 
 INCLUDES= \
 	-I. \
@@ -44,7 +44,7 @@ CFLAGS= \
 
 LDFLAGS=-Wl,--gc-sections -lcurl -lcairo
 
-homeboard_ambience: \
+ambiencesvc: \
 		build/libwwwslide/wwwslider.o \
 		build/libeink/liblgpio/lgCtx.o \
 		build/libeink/liblgpio/lgDbg.o \
@@ -78,8 +78,8 @@ install_sysroot_deps:
 	./rpiz-xcompile/add_sysroot_pkg.sh ~/src/xcomp-rpiz-env http://raspbian.raspberrypi.com/raspbian/pool/main/c/curl/libcurl4-openssl-dev_7.88.1-10+rpi1+deb12u8_armhf.deb
 
 .PHONY: deploy run
-deploy: example
-	scp eink StoneBakedMargheritaHomeboard:/home/batman/example
+deploy: ambiencesvc
+	scp ambiencesvc StoneBakedMargheritaHomeboard:/home/batman/example
 run: deploy
 	ssh StoneBakedMargheritaHomeboard /home/batman/example
 

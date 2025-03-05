@@ -38,6 +38,7 @@ void shm_free(struct ShmHandle* h) {
 
   free((void*)h->fname);
   close(h->fd);
+  free(h);
 }
 
 void shm_free_leak_shm(struct ShmHandle* h) {
