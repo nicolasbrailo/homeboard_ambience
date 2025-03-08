@@ -1,8 +1,8 @@
 #include "config_base.h"
 
+#include <json-c/json.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <json-c/json.h>
 
 struct Config {
   struct json_object *json;
@@ -47,7 +47,7 @@ bool config_get_string(struct Config *h, const char *k, const char **v) {
   return false;
 }
 
-bool config_get_int(struct Config *h, const char *k, int* v) {
+bool config_get_int(struct Config *h, const char *k, int *v) {
   struct json_object *n;
   if (json_object_object_get_ex(h->json, k, &n)) {
     *v = json_object_get_int(n);
@@ -57,7 +57,7 @@ bool config_get_int(struct Config *h, const char *k, int* v) {
   return false;
 }
 
-bool config_get_size_t(struct Config *h, const char *k, size_t* v) {
+bool config_get_size_t(struct Config *h, const char *k, size_t *v) {
   int iv;
   if (!config_get_int(h, k, &iv)) {
     return false;
@@ -71,7 +71,7 @@ bool config_get_size_t(struct Config *h, const char *k, size_t* v) {
   return true;
 }
 
-bool config_get_bool(struct Config *h, const char *k, bool* v) {
+bool config_get_bool(struct Config *h, const char *k, bool *v) {
   struct json_object *n;
   if (json_object_object_get_ex(h->json, k, &n)) {
     *v = json_object_get_boolean(n);
@@ -80,4 +80,3 @@ bool config_get_bool(struct Config *h, const char *k, bool* v) {
 
   return false;
 }
-

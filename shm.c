@@ -14,16 +14,15 @@
 #define MIN_SHM_SZ 1
 
 struct ShmHandle {
-  const char* fname;
+  const char *fname;
   int fd;
-  void* ptr;
+  void *ptr;
   size_t sz;
   size_t max_sz;
   bool should_leak_shm;
 };
 
-
-void shm_free(struct ShmHandle* h) {
+void shm_free(struct ShmHandle *h) {
   if (!h) {
     return;
   }
@@ -36,17 +35,17 @@ void shm_free(struct ShmHandle* h) {
     shm_unlink(h->fname);
   }
 
-  free((void*)h->fname);
+  free((void *)h->fname);
   close(h->fd);
   free(h);
 }
 
-void shm_free_leak_shm(struct ShmHandle* h) {
+void shm_free_leak_shm(struct ShmHandle *h) {
   h->should_leak_shm = true;
   shm_free(h);
 }
 
-struct ShmHandle* shm_init(const char* shm_shared_fname, size_t max_sz_bytes) {
+struct ShmHandle *shm_init(const char *shm_shared_fname, size_t max_sz_bytes) {
   struct ShmHandle *h = malloc(sizeof(struct ShmHandle));
   if (!h) {
     perror("shm: handle, bad alloc");
@@ -89,9 +88,10 @@ err:
   return NULL;
 }
 
-int shm_update(struct ShmHandle* h, const void* data, size_t sz) {
+int shm_update(struct ShmHandle *h, const void *data, size_t sz) {
   if (sz > h->max_sz) {
-    fprintf(stderr, "Requested shm data of %zu is bigger than max size %zu\n", sz, h->max_sz);
+    fprintf(stderr, "Requested shm data of %zu is bigger than max size %zu\n",
+            sz, h->max_sz);
     return -ENOMEM;
   }
 
@@ -118,7 +118,7 @@ int shm_update(struct ShmHandle* h, const void* data, size_t sz) {
   return 0;
 }
 
-int shm_update_from_file(struct ShmHandle* h, const char* fpath) {
+int shm_update_from_file(struct ShmHandle *h, const char *fpath) {
   FILE *fp = fopen(fpath, "rb");
   if (!fp) {
     perror("shm update: can't open file");
@@ -155,4 +155,3 @@ int shm_update_from_file(struct ShmHandle* h, const char* fpath) {
   fclose(fp);
   return file_stat.st_size;
 }
-

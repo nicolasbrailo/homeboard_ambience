@@ -8,12 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 int kill_old_and_get_pid_for(const char *process_name) {
   DIR *dir = opendir("/proc");
   if (!dir) {
-      perror("kill_old_and_get_pid_for: opendir");
-      return -1;
+    perror("kill_old_and_get_pid_for: opendir");
+    return -1;
   }
 
   int pid = -1;
@@ -36,7 +35,10 @@ int kill_old_and_get_pid_for(const char *process_name) {
     if (fgets(tmpbuff, sizeof(tmpbuff), cmd_file)) {
       if (strstr(tmpbuff, process_name) != NULL) {
         if (pid != -1) {
-          fprintf(stderr, "Multiple pids (%d, %d) found for command %s. Killing pid %d\n", pid, found_pid, process_name, pid);
+          fprintf(
+              stderr,
+              "Multiple pids (%d, %d) found for command %s. Killing pid %d\n",
+              pid, found_pid, process_name, pid);
           if (kill(pid, SIGKILL) != 0) {
             perror("kill_old_and_get_pid_for: can't kill old pid");
           }
@@ -52,7 +54,8 @@ int kill_old_and_get_pid_for(const char *process_name) {
   return pid;
 }
 
-int signal_single_kill_old_impl(int signum, const char* proc_name, int last_known_pid, int retry) {
+int signal_single_kill_old_impl(int signum, const char *proc_name,
+                                int last_known_pid, int retry) {
   if (last_known_pid == -1) {
     last_known_pid = kill_old_and_get_pid_for(proc_name);
   }
@@ -69,25 +72,35 @@ int signal_single_kill_old_impl(int signum, const char* proc_name, int last_know
 
   if (sigret == ESRCH) {
     if (retry > 0) {
-      printf("Known pid %d for proc %s is no longer valid (crashed?), will search new pid\n", last_known_pid, proc_name);
-      return signal_single_kill_old_impl(signum, proc_name, -1, retry-1);
+      printf("Known pid %d for proc %s is no longer valid (crashed?), will "
+             "search new pid\n",
+             last_known_pid, proc_name);
+      return signal_single_kill_old_impl(signum, proc_name, -1, retry - 1);
     } else {
-      fprintf(stderr, "Signal single s failed after retrying, proc %s may be in a crashloop\n", proc_name);
+      fprintf(stderr,
+              "Signal single s failed after retrying, proc %s may be in a "
+              "crashloop\n",
+              proc_name);
       return -1;
     }
   }
 
   if (sigret < 0) {
-    fprintf(stderr, "Failed to deliver signal to process %s (pid %d), error %d: %s\n", proc_name, last_known_pid, errno, strerror(errno));
+    fprintf(stderr,
+            "Failed to deliver signal to process %s (pid %d), error %d: %s\n",
+            proc_name, last_known_pid, errno, strerror(errno));
     return last_known_pid;
   }
 
   // Shouldn't happen
-  fprintf(stderr, "Failed to deliver signal to process %s (pid %d), unknown error %d: %s\n", proc_name, last_known_pid, errno, strerror(errno));
+  fprintf(
+      stderr,
+      "Failed to deliver signal to process %s (pid %d), unknown error %d: %s\n",
+      proc_name, last_known_pid, errno, strerror(errno));
   return -1;
 }
 
-int signal_single_kill_old(int signum, const char* proc_name, int last_known_pid) {
+int signal_single_kill_old(int signum, const char *proc_name,
+                           int last_known_pid) {
   return signal_single_kill_old_impl(signum, proc_name, last_known_pid, 1);
 }
-
