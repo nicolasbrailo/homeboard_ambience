@@ -41,7 +41,8 @@ void on_image_received(const void *img_ptr, size_t img_sz, const char *meta_ptr,
 int main(int argc, const char **argv) {
   struct WwwSlider *wwwslider = NULL;
 
-  if (!(g_cfg = ambiencesvc_config_init("config.json"))) {
+  const char* cfg_fpath = argc > 1? argv[1] : "config.json";
+  if (!(g_cfg = ambiencesvc_config_init(cfg_fpath))) {
     goto err;
   }
 

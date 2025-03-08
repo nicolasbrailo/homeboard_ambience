@@ -5,7 +5,7 @@
   "image_request_standalone_qr": true,
   "image_request_metadata": true,
 
-  "www_svc_url": "http://bati.casa:5000",
+  "www_svc_url": "127.0.0.1:5000",
   "www_client_id": "ambience_svc_test",
 
   "shm_image_file_name": "ambience_img",

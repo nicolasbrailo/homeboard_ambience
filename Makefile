@@ -5,7 +5,7 @@ XCOMPILE=\
 	 --sysroot $(SYSROOT)
 
 # Uncomment to build to local target:
-XCOMPILE=
+#XCOMPILE=
 
 INCLUDES= \
 	-I. \
