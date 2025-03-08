@@ -5,7 +5,7 @@ XCOMPILE=\
 	 --sysroot $(SYSROOT)
 
 # Uncomment to build to local target:
-# XCOMPILE=
+XCOMPILE=
 
 INCLUDES= \
 	-I. \
@@ -42,7 +42,7 @@ CFLAGS= \
 	-Wuninitialized \
 
 
-LDFLAGS=-Wl,--gc-sections -lcurl -lcairo
+LDFLAGS=-Wl,--gc-sections -lcurl -lcairo -ljson-c
 
 ambiencesvc: \
 		build/libwwwslide/wwwslider.o \
@@ -54,6 +54,9 @@ ambiencesvc: \
 		build/libeink/liblgpio/lgPthTx.o \
 		build/libeink/liblgpio/lgSPI.o \
 		build/libeink/libeink/eink.o \
+		build/config_base.o \
+		build/config.o \
+		build/proc_utils.o \
 		build/shm.o \
 		build/main.o
 	clang $(CFLAGS) $(LDFLAGS) $^ -o $@

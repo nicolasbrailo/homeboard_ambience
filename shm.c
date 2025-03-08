@@ -99,18 +99,16 @@ int shm_update(struct ShmHandle* h, const void* data, size_t sz) {
     sz = MIN_SHM_SZ;
   }
 
-  if (h->sz < sz) {
-    h->sz = sz;
-    if (ftruncate(h->fd, h->sz) < 0) {
-      perror("shm: can't resize");
-      return -ENOMEM;
-    }
+  h->sz = sz;
+  if (ftruncate(h->fd, h->sz) < 0) {
+    perror("shm: can't resize");
+    return -ENOMEM;
+  }
 
-    h->ptr = mmap(h->ptr, h->sz, PROT_READ | PROT_WRITE, MAP_SHARED, h->fd, 0);
-    if (h->ptr == MAP_FAILED) {
-      perror("shm: can't remmap");
-      return -ENOMEM;
-    }
+  h->ptr = mmap(h->ptr, h->sz, PROT_READ | PROT_WRITE, MAP_SHARED, h->fd, 0);
+  if (h->ptr == MAP_FAILED) {
+    perror("shm: can't remmap");
+    return -ENOMEM;
   }
 
   if (data) {
