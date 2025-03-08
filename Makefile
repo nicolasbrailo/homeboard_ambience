@@ -22,7 +22,7 @@ CFLAGS= \
 	$(INCLUDES) \
 	-fdiagnostics-color=always \
 	-ffunction-sections -fdata-sections \
-	-ggdb -O0 \
+	-ggdb -O3 \
 	-std=gnu99 \
 	-Wall -Werror \
 	-Wendif-labels \
@@ -32,9 +32,10 @@ CFLAGS= \
 	-Winvalid-pch \
 	-Wmissing-field-initializers \
 	-Wmissing-include-dirs \
-	-Wno-unused-function \
-	-Woverflow \
 	-Wno-strict-prototypes \
+	-Wno-unused-function \
+	-Wno-unused-parameter \
+	-Woverflow \
 	-Wpointer-arith \
 	-Wredundant-decls \
 	-Wstrict-aliasing=2 \
@@ -63,8 +64,12 @@ ambiencesvc: \
 
 clean:
 	rm -rf build
+	rm ambiencesvc
 
 build/%.o: %.c
+	mkdir -p $(shell dirname $@)
+	clang $(CFLAGS) -c $^ -o $@
+build/%.o: src/%.c
 	mkdir -p $(shell dirname $@)
 	clang $(CFLAGS) -c $^ -o $@
 
