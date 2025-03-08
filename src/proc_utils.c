@@ -1,12 +1,15 @@
 #include "proc_utils.h"
 
+// Macro to get memmem
+#define _GNU_SOURCE
+#include <string.h>
+
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 int kill_old_and_get_pid_for(const char *process_name) {
   DIR *dir = opendir("/proc");
@@ -15,6 +18,7 @@ int kill_old_and_get_pid_for(const char *process_name) {
     return -1;
   }
 
+  const size_t process_name_len = strlen(process_name);
   int pid = -1;
   struct dirent *entry;
   while ((entry = readdir(dir)) != NULL) {
@@ -24,16 +28,18 @@ int kill_old_and_get_pid_for(const char *process_name) {
       continue;
     }
 
-    char tmpbuff[256];
-    snprintf(tmpbuff, sizeof(tmpbuff), "/proc/%s/comm", entry->d_name);
+    char tmpbuff[1024];
+    snprintf(tmpbuff, sizeof(tmpbuff), "/proc/%s/cmdline", entry->d_name);
     FILE *cmd_file = fopen(tmpbuff, "r");
     if (!cmd_file) {
       // Process might have terminated
       continue;
     }
 
-    if (fgets(tmpbuff, sizeof(tmpbuff), cmd_file)) {
-      if (strstr(tmpbuff, process_name) != NULL) {
+    const size_t read_sz = fread(tmpbuff, 1, sizeof(tmpbuff), cmd_file);
+    if (read_sz > 0) {
+      // cmd args may have \0's, so strstr won't work
+      if (memmem(tmpbuff, read_sz, process_name, process_name_len) != NULL) {
         if (pid != -1) {
           fprintf(
               stderr,
