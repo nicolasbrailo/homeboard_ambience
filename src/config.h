@@ -40,6 +40,12 @@ struct AmbienceSvcConfig {
 
   // Time between pictures
   size_t slideshow_sleep_time_sec;
+
+  // Skip displaying things to eInk
+  bool eink_mock_display;
+
+  // Save Ink image to file
+  const char* eink_save_render_to_png_file;
 };
 
 struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath);

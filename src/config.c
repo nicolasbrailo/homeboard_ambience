@@ -58,6 +58,14 @@ struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath) {
       cfg->key = strdup(tmp);                                                  \
     }                                                                          \
   }
+#define CFG_GET_STR_OPT(key)                                                   \
+  {                                                                            \
+    const char *tmp = NULL;                                                    \
+    if (config_get_string(cfgbase, #key, &tmp)) {                              \
+      /* Make a copy; the other string belongs to jsonc */                     \
+      cfg->key = strdup(tmp);                                                  \
+    }                                                                          \
+  }
 
   CFG_GET_SZ(image_target_width);
   CFG_GET_SZ(image_target_height);
@@ -72,6 +80,8 @@ struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath) {
   CFG_GET_STR(shm_leak_image_path);
   CFG_GET_STR(image_render_proc_name);
   CFG_GET_SZ(slideshow_sleep_time_sec);
+  CFG_GET_BOOL(eink_mock_display);
+  CFG_GET_STR_OPT(eink_save_render_to_png_file);
 
 #undef CFG_GET_SZ
 #undef CFG_GET_BOOL
@@ -162,5 +172,7 @@ void ambiencesvc_config_print(struct AmbienceSvcConfig *h) {
   printf("\tshm_leak_image_path=%s,\n", h->shm_leak_image_path);
   printf("\timage_render_proc_name=%s,\n", h->image_render_proc_name);
   printf("\tslideshow_sleep_time_sec=%zu,\n", h->slideshow_sleep_time_sec);
+  printf("\teink_mock_display=%d,\n", h->eink_mock_display);
+  printf("\teink_save_render_to_png_file=%s,\n", h->eink_save_render_to_png_file);
   printf("}\n");
 }

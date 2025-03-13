@@ -15,13 +15,66 @@ atomic_bool g_user_intr = false;
 int g_img_render_pid = -1;
 struct AmbienceSvcConfig *g_cfg = NULL;
 struct ShmHandle *g_shm = NULL;
+struct EInkDisplay *g_eink = NULL;
 
 void handle_user_intr(int sig) { g_user_intr = true; }
 
+
+#include <cairo/cairo.h>
+#include <json-c/json.h>
+
+void foo(const char* meta_json) {
+  json_object *jobj = json_tokener_parse(meta_json);
+  if (jobj == NULL) {
+    fprintf(stderr, "Error parsing JSON string\n");
+    return;
+  }
+
+  struct json_object *remotepath;
+  if (json_object_object_get_ex(jobj, "local_path", &remotepath)) {
+    const char* v = json_object_get_string(remotepath);
+    printf("Received file %s\n", v);
+  } else {
+    printf("Received unknown file %s\n", meta_json);
+  }
+
+  cairo_t *cr = eink_get_cairo(g_eink);
+  cairo_surface_t *surface = cairo_get_target(cr);
+  const size_t width = cairo_image_surface_get_width(surface);
+  const size_t height = cairo_image_surface_get_height(surface);
+
+  // Set text properties (black, fully opaque)
+  cairo_set_source_rgba(cr, 0, 0, 0, 1);
+  cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL,
+                         CAIRO_FONT_WEIGHT_BOLD);
+  cairo_set_font_size(cr, 20);
+
+  // Calculate text position
+  cairo_text_extents_t extents;
+  const char *text = "Built @ " __TIME__;
+  cairo_text_extents(cr, text, &extents);
+  double x = (width - extents.width) / 2 - extents.x_bearing;
+  double y = (height - extents.height) / 2 - extents.y_bearing;
+
+  // Draw text
+  cairo_move_to(cr, x, y);
+  cairo_show_text(cr, text);
+
+  // Draw rectangle around text
+  cairo_set_line_width(cr, 2);
+  cairo_rectangle(cr, x + extents.x_bearing - 10, y + extents.y_bearing - 10,
+                  extents.width + 20, extents.height + 20);
+  cairo_stroke(cr);
+
+  eink_render(g_eink);
+}
+
+
 void on_image_received(const void *img_ptr, size_t img_sz, const char *meta_ptr,
                        size_t meta_sz, const void *qr_ptr, size_t qr_sz) {
-  printf("Received new image%s%s\n", meta_ptr ? ": " : "",
-         meta_ptr ? meta_ptr : "");
+  //printf("Received new image%s%s\n", meta_ptr ? ": " : "",
+  //       meta_ptr ? meta_ptr : "");
+  foo(meta_ptr);
 
   if (shm_update(g_shm, img_ptr, img_sz) < 0) {
     fprintf(stderr, "Failed to update shm with received image\n");
@@ -51,6 +104,14 @@ int main(int argc, const char **argv) {
 
   if (!(g_shm = shm_init(g_cfg->shm_image_file_name,
                          g_cfg->shm_image_max_size_bytes))) {
+    goto err;
+  }
+
+  struct EInkConfig eink_cfg = {
+    .mock_display = true,
+    .save_render_to_png_file = "eink.png",
+  };
+  if (!(g_eink = eink_init(&eink_cfg))) {
     goto err;
   }
 
@@ -103,6 +164,7 @@ int main(int argc, const char **argv) {
 
   ambiencesvc_config_free(g_cfg);
   wwwslider_free(wwwslider);
+  eink_delete(g_eink);
   return 0;
 
 err:
@@ -110,5 +172,6 @@ err:
   wwwslider_free(wwwslider);
   shm_free(g_shm);
   ambiencesvc_config_free(g_cfg);
+  eink_delete(g_eink);
   return 1;
 }
