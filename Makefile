@@ -22,7 +22,7 @@ CFLAGS= \
 	$(INCLUDES) \
 	-fdiagnostics-color=always \
 	-ffunction-sections -fdata-sections \
-	-ggdb -O3 \
+	-ggdb -O0 \
 	-std=gnu99 \
 	-Wall -Werror \
 	-Wendif-labels \
@@ -43,7 +43,7 @@ CFLAGS= \
 	-Wuninitialized \
 
 
-LDFLAGS=-Wl,--gc-sections -lcurl -lcairo -ljson-c
+LDFLAGS=-Wl,--gc-sections -lcurl -lcairo -ljson-c -ljpeg
 
 ambiencesvc: \
 		build/libwwwslide/wwwslider.o \
@@ -83,8 +83,9 @@ xcompile-end:
 
 install_sysroot_deps:
 	./rpiz-xcompile/add_sysroot_pkg.sh ~/src/xcomp-rpiz-env http://archive.raspberrypi.com/debian/pool/main/c/cairo/libcairo2-dev_1.16.0-7+rpt1_armhf.deb
-	./rpiz-xcompile/add_sysroot_pkg.sh ~/src/xcomp-rpiz-env http://raspbian.raspberrypi.com/raspbian/pool/main/j/json-c/libjson-c-dev_0.16-2_armhf.deb
 	./rpiz-xcompile/add_sysroot_pkg.sh ~/src/xcomp-rpiz-env http://raspbian.raspberrypi.com/raspbian/pool/main/c/curl/libcurl4-openssl-dev_7.88.1-10+rpi1+deb12u8_armhf.deb
+	./rpiz-xcompile/add_sysroot_pkg.sh ~/src/xcomp-rpiz-env http://raspbian.raspberrypi.com/raspbian/pool/main/j/json-c/libjson-c-dev_0.16-2_armhf.deb
+	./rpiz-xcompile/add_sysroot_pkg.sh ~/src/xcomp-rpiz-env http://raspbian.raspberrypi.com/raspbian/pool/main/libj/libjpeg-turbo/libjpeg-dev_2.1.5-2_armhf.deb
 
 .PHONY: deploy run
 deploy: ambiencesvc
