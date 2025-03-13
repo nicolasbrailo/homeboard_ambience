@@ -1,5 +1,5 @@
-#include "config_base.h"
 #include <stddef.h>
+#include <stdbool.h>
 
 struct AmbienceSvcConfig {
   // Target width and height for requested image

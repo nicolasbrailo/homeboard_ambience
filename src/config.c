@@ -1,5 +1,5 @@
 #include "config.h"
-#include "config_base.h"
+#include "json.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,7 +7,10 @@
 #include <sys/stat.h>
 
 #define IMG_MIN_SIZE_PX 300
-#define SHM_IMAGE_MAX_SIZE_BYTES_MIN 2 * 1024 * 1024
+#define IMG_MAX_SIZE_PX 6000
+#define SHM_IMAGE_MAX_SIZE_BYTES 50 * 1024 * 1024
+#define SHM_IMAGE_MIN_SIZE_BYTES 2 * 1024 * 1024
+#define SLIDESHOW_SLEEP_TIME_SEC_MIN 5
 #define SLIDESHOW_SLEEP_TIME_SEC_MAX 1000
 
 bool file_is_valid(const char *fpath) {
@@ -28,89 +31,41 @@ bool file_is_valid(const char *fpath) {
 }
 
 struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath) {
+  struct json_object *json = NULL;
   struct AmbienceSvcConfig *cfg = malloc(sizeof(struct AmbienceSvcConfig));
-  struct Config *cfgbase = config_init(fpath);
-  if (!cfg || !cfgbase) {
+  if (!cfg) {
     goto err;
   }
 
-#define CFG_GET_SZ(key)                                                        \
-  if (!config_get_size_t(cfgbase, #key, &cfg->key)) {                          \
-    fprintf(stderr,                                                            \
-            "Failed to read config: can't find size value " #key "\n");        \
-    goto err;                                                                  \
-  }
-#define CFG_GET_BOOL(key)                                                      \
-  if (!config_get_bool(cfgbase, #key, &cfg->key)) {                            \
-    fprintf(stderr,                                                            \
-            "Failed to read config: can't find bool value " #key "\n");        \
-    goto err;                                                                  \
-  }
-#define CFG_GET_STR(key)                                                       \
-  {                                                                            \
-    const char *tmp = NULL;                                                    \
-    if (!config_get_string(cfgbase, #key, &tmp)) {                             \
-      fprintf(stderr,                                                          \
-              "Failed to read config: can't find str value " #key "\n");       \
-      goto err;                                                                \
-    } else {                                                                   \
-      /* Make a copy; the other string belongs to jsonc */                     \
-      cfg->key = strdup(tmp);                                                  \
-    }                                                                          \
-  }
-#define CFG_GET_STR_OPT(key)                                                   \
-  {                                                                            \
-    const char *tmp = NULL;                                                    \
-    if (config_get_string(cfgbase, #key, &tmp)) {                              \
-      /* Make a copy; the other string belongs to jsonc */                     \
-      cfg->key = strdup(tmp);                                                  \
-    }                                                                          \
-  }
+  cfg->www_svc_url = NULL;
+  cfg->www_client_id = NULL;
+  cfg->shm_image_file_name = NULL;
+  cfg->shm_leak_image_path = NULL;
+  cfg->image_render_proc_name = NULL;
+  cfg->eink_save_render_to_png_file = NULL;
 
-  CFG_GET_SZ(image_target_width);
-  CFG_GET_SZ(image_target_height);
-  CFG_GET_BOOL(image_embed_qr);
-  CFG_GET_BOOL(image_request_standalone_qr);
-  CFG_GET_BOOL(image_request_metadata);
-  CFG_GET_STR(www_svc_url);
-  CFG_GET_STR(www_client_id);
-  CFG_GET_STR(shm_image_file_name);
-  CFG_GET_SZ(shm_image_max_size_bytes);
-  CFG_GET_BOOL(shm_leak_file);
-  CFG_GET_STR(shm_leak_image_path);
-  CFG_GET_STR(image_render_proc_name);
-  CFG_GET_SZ(slideshow_sleep_time_sec);
-  CFG_GET_BOOL(eink_mock_display);
-  CFG_GET_STR_OPT(eink_save_render_to_png_file);
-
-#undef CFG_GET_SZ
-#undef CFG_GET_BOOL
-#undef CFG_GET_STR
-
-  // Validate cfg makes sense
-  if ((cfg->image_target_width < IMG_MIN_SIZE_PX) ||
-      (cfg->image_target_height < IMG_MIN_SIZE_PX)) {
-    fprintf(stderr,
-            "Config err: target width and height must be at least %dx%d\n",
-            IMG_MIN_SIZE_PX, IMG_MIN_SIZE_PX);
+  json = json_init(fpath);
+  if (!json) {
     goto err;
   }
 
-  if (strlen(cfg->www_svc_url) == 0) {
-    fprintf(stderr, "www_svc_url must not be empty\n");
-    goto err;
-  }
-
-  if (strlen(cfg->shm_image_file_name) == 0) {
-    fprintf(stderr, "shm_image_file_name must not be empty\n");
-    goto err;
-  }
-
-  if (cfg->shm_image_max_size_bytes < SHM_IMAGE_MAX_SIZE_BYTES_MIN) {
-    fprintf(stderr,
-            "Config err: shm_image_max_size_bytes of %zu is too small, min "
-            "expected is %d\n",
-            cfg->slideshow_sleep_time_sec, SHM_IMAGE_MAX_SIZE_BYTES_MIN);
+  bool ok = true;
+  ok &= json_get_size_t(json, "image_target_width", &cfg->image_target_width, IMG_MIN_SIZE_PX, IMG_MAX_SIZE_PX);
+  ok &= json_get_size_t(json, "image_target_height", &cfg->image_target_height, IMG_MIN_SIZE_PX, IMG_MAX_SIZE_PX);
+  ok &= json_get_bool(json, "image_embed_qr", &cfg->image_embed_qr);
+  ok &= json_get_bool(json, "image_request_standalone_qr", &cfg->image_request_standalone_qr);
+  ok &= json_get_bool(json, "image_request_metadata", &cfg->image_request_metadata);
+  ok &= json_get_strdup(json, "www_svc_url", &cfg->www_svc_url);
+  ok &= json_get_strdup(json, "www_client_id", &cfg->www_client_id);
+  ok &= json_get_strdup(json, "shm_image_file_name", &cfg->shm_image_file_name);
+  ok &= json_get_size_t(json, "shm_image_max_size_bytes", &cfg->shm_image_max_size_bytes, SHM_IMAGE_MIN_SIZE_BYTES, SHM_IMAGE_MAX_SIZE_BYTES);
+  ok &= json_get_bool(json, "shm_leak_file", &cfg->shm_leak_file);
+  ok &= json_get_strdup(json, "shm_leak_image_path", &cfg->shm_leak_image_path);
+  ok &= json_get_strdup(json, "image_render_proc_name", &cfg->image_render_proc_name);
+  ok &= json_get_size_t(json, "slideshow_sleep_time_sec", &cfg->slideshow_sleep_time_sec, SLIDESHOW_SLEEP_TIME_SEC_MIN, SLIDESHOW_SLEEP_TIME_SEC_MAX);
+  ok &= json_get_bool(json, "eink_mock_display", &cfg->eink_mock_display);
+  ok &= json_get_optional_strdup(json, "eink_save_render_to_png_file", &cfg->eink_save_render_to_png_file);
+  if (!ok) {
     goto err;
   }
 
@@ -122,25 +77,10 @@ struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath) {
     goto err;
   }
 
-  if (strlen(cfg->image_render_proc_name) == 0) {
-    fprintf(stderr, "image_render_proc_name must not be empty\n");
-    goto err;
-  }
-
-  if (cfg->slideshow_sleep_time_sec > SLIDESHOW_SLEEP_TIME_SEC_MAX) {
-    fprintf(stderr,
-            "Config err: slideshow_sleep_time_sec of %zu is too large, max "
-            "expected is %d seconds\n",
-            cfg->slideshow_sleep_time_sec, SLIDESHOW_SLEEP_TIME_SEC_MAX);
-    goto err;
-  }
-
   return cfg;
 
 err:
-  if (cfgbase) {
-    config_free(cfgbase);
-  }
+  json_free(json);
   ambiencesvc_config_free(cfg);
   return NULL;
 }

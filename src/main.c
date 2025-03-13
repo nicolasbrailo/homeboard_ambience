@@ -21,54 +21,7 @@ void handle_user_intr(int sig) { g_user_intr = true; }
 
 
 #include <json-c/json.h>
-
-const char* json_get_nested_key(struct json_object* obj, const char* key) {
-  const size_t max_depth = 10;
-  char subkey[32];
-  size_t subkey_i = 0;
-  size_t subkey_f = 0;
-
-  for (size_t lvl = 0; lvl < max_depth; lvl++) {
-    while ((key[subkey_f] != '\0') && (key[subkey_f] != '.')) {
-      subkey_f++;
-    }
-
-    if (subkey_f == subkey_i) {
-      fprintf(stderr, "Error retrieving metadata: requested metadata key '%s' can't be parsed\n", key);
-      return NULL;
-
-    } else if (subkey_f - subkey_i > sizeof(subkey)) {
-      fprintf(stderr, "Error retrieving metadata: requested metadata key '%s' is too large to handle\n", key);
-      return NULL;
-
-    } else {
-      size_t subkey_sz = subkey_f - subkey_i;
-      strncpy(subkey, &key[subkey_i], subkey_sz);
-      subkey[subkey_sz] = '\0';
-
-      // Traverse json tree
-      struct json_object* tmp;
-      if (!json_object_object_get_ex(obj, subkey, &tmp)) {
-        fprintf(stderr, "Error retrieving metadata: requested key '%s' doesn't exist\n", key);
-        return NULL;
-      }
-      obj = tmp;
-
-      if (key[subkey_f] == '.') {
-        // We're still traversing, do nothing
-      } else {
-        // Found a leaf
-        return json_object_get_string(obj);
-      }
-
-      subkey_f = subkey_i = subkey_f+1;
-    }
-  }
-
-  fprintf(stderr, "Error retrieving metadata: requested metadata key '%s' too deeply nested, expected max %zu levels\n", key, max_depth);
-  return NULL;
-}
-
+#include "json.h"
 
 #include <cairo/cairo.h>
 #include <ctype.h>

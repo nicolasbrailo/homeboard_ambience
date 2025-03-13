@@ -55,7 +55,7 @@ ambiencesvc: \
 		build/libeink/liblgpio/lgPthTx.o \
 		build/libeink/liblgpio/lgSPI.o \
 		build/libeink/libeink/eink.o \
-		build/config_base.o \
+		build/json.o \
 		build/config.o \
 		build/proc_utils.o \
 		build/shm.o \
