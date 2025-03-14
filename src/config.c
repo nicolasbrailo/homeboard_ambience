@@ -13,7 +13,7 @@
 #define SLIDESHOW_SLEEP_TIME_SEC_MIN 5
 #define SLIDESHOW_SLEEP_TIME_SEC_MAX 1000
 
-bool file_is_valid(const char *fpath) {
+static bool file_is_valid(const char *fpath) {
   FILE *fp = fopen(fpath, "rb");
   if (!fp) {
     return false;
@@ -30,6 +30,38 @@ bool file_is_valid(const char *fpath) {
   return ret;
 }
 
+static bool cfg_parse_image_metadata_keys(size_t arr_len, size_t idx,
+                                          struct json_object *obj, void *usr) {
+  struct AmbienceSvcConfig *cfg = usr;
+  if ((cfg->image_metadata_keys_count > 0) &&
+      (cfg->image_metadata_keys_count != arr_len)) {
+    fprintf(stderr,
+            "Config err: image_metadata_keys changed size unexpectedly, found "
+            "%zu, expected %zu\n",
+            arr_len, cfg->image_metadata_keys_count);
+    return false;
+  }
+
+  if (cfg->image_metadata_keys_count == 0) {
+    if (cfg->image_metadata_keys != NULL) {
+      fprintf(stderr, "Config err: bug, image_metadata_keys already alloc?\n");
+      return false;
+    }
+
+    cfg->image_metadata_keys_count = arr_len;
+    const size_t sz = sizeof(const char *) * arr_len;
+    cfg->image_metadata_keys = malloc(sz);
+    if (!cfg->image_metadata_keys) {
+      fprintf(stderr, "Config err: image_metadata_keys bad alloc\n");
+      return false;
+    }
+
+    memset(cfg->image_metadata_keys, 0, sz);
+  }
+
+  return jsonobj_strdup(obj, &cfg->image_metadata_keys[idx]);
+}
+
 struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath) {
   struct json_object *json = NULL;
   struct AmbienceSvcConfig *cfg = malloc(sizeof(struct AmbienceSvcConfig));
@@ -37,6 +69,8 @@ struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath) {
     goto err;
   }
 
+  cfg->image_metadata_keys = NULL;
+  cfg->image_metadata_keys_count = 0;
   cfg->www_svc_url = NULL;
   cfg->www_client_id = NULL;
   cfg->shm_image_file_name = NULL;
@@ -59,6 +93,8 @@ struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath) {
                       &cfg->image_request_standalone_qr);
   ok &= json_get_bool(json, "image_request_metadata",
                       &cfg->image_request_metadata);
+  ok &= json_get_arr(json, "image_metadata_keys", cfg_parse_image_metadata_keys,
+                     cfg);
   ok &= json_get_strdup(json, "www_svc_url", &cfg->www_svc_url);
   ok &= json_get_strdup(json, "www_client_id", &cfg->www_client_id);
   ok &= json_get_strdup(json, "shm_image_file_name", &cfg->shm_image_file_name);
@@ -84,6 +120,12 @@ struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath) {
             "Config err: shm_leak_image_path must point to a valid file, can't "
             "open %s\n",
             cfg->shm_leak_image_path);
+    goto err;
+  }
+
+  if (cfg->image_request_metadata && (cfg->image_metadata_keys_count == 0)) {
+    fprintf(stderr, "Config err: image_request_metadata is set, but no "
+                    "image_metadata_keys defined\n");
     goto err;
   }
 
@@ -114,6 +156,11 @@ void ambiencesvc_config_print(struct AmbienceSvcConfig *h) {
   printf("\timage_embed_qr=%d,\n", h->image_embed_qr);
   printf("\timage_request_standalone_qr=%d,\n", h->image_request_standalone_qr);
   printf("\timage_request_metadata=%d,\n", h->image_request_metadata);
+  printf("\timage_metadata_keys_count=%zu,\n", h->image_metadata_keys_count);
+  for (size_t i = 0; i < h->image_metadata_keys_count; ++i) {
+    printf("\timage_metadata_keys[%zu]=\"%s\",\n", i,
+           h->image_metadata_keys[i]);
+  }
   printf("\twww_svc_url=%s,\n", h->www_svc_url);
   printf("\twww_client_id=%s,\n", h->www_client_id);
   printf("\tshm_image_file_name=%s,\n", h->shm_image_file_name);

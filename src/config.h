@@ -15,6 +15,10 @@ struct AmbienceSvcConfig {
   // Show image metadata
   bool image_request_metadata;
 
+  // Which keys should be shown in the metadata display
+  size_t image_metadata_keys_count;
+  const char **image_metadata_keys;
+
   // Where to get new pictures from
   const char *www_svc_url;
 

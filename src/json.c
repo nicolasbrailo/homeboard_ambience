@@ -27,17 +27,9 @@ void json_free(struct json_object *h) {
   json_object_put(h);
 }
 
-static bool json_get_strdup_impl(struct json_object *h, const char *k,
-                                 const char **v, bool is_optional) {
-  struct json_object *n;
-  if (!json_object_object_get_ex(h, k, &n)) {
-    if (!is_optional) {
-      fprintf(stderr, "Failed to read config: can't find str value %s\n", k);
-    }
-    return false;
-  }
-
-  const char *json_v = json_object_get_string(n);
+static bool jsonobj_strdup_impl(struct json_object *h, const char *k,
+                                const char **v, bool is_optional) {
+  const char *json_v = json_object_get_string(h);
   if (!json_v) {
     if (!is_optional) {
       fprintf(stderr, "Failed to read key %s, not a string\n", k);
@@ -61,6 +53,23 @@ static bool json_get_strdup_impl(struct json_object *h, const char *k,
   }
 
   return true;
+}
+
+bool jsonobj_strdup(struct json_object *h, const char **v) {
+  return jsonobj_strdup_impl(h, "string", v, false);
+}
+
+static bool json_get_strdup_impl(struct json_object *h, const char *k,
+                                 const char **v, bool is_optional) {
+  struct json_object *n;
+  if (!json_object_object_get_ex(h, k, &n)) {
+    if (!is_optional) {
+      fprintf(stderr, "Failed to read config: can't find str value %s\n", k);
+    }
+    return false;
+  }
+
+  return jsonobj_strdup_impl(n, k, v, is_optional);
 }
 
 bool json_get_optional_strdup(struct json_object *h, const char *k,

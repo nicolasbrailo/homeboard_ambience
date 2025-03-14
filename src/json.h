@@ -24,3 +24,6 @@ bool json_get_arr(struct json_object *h, const char *k, arr_parse_cb cb,
 // Retrieve a string key from a nested path, eg "foo.bar.baz" will return "baz"
 // as a string Ownership retained by this module
 const char *json_get_nested_key(struct json_object *obj, const char *key);
+
+// Helper to retrieve a string without a key (eg in an arr)
+bool jsonobj_strdup(struct json_object *h, const char **v);
