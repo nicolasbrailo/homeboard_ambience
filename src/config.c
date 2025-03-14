@@ -50,21 +50,31 @@ struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath) {
   }
 
   bool ok = true;
-  ok &= json_get_size_t(json, "image_target_width", &cfg->image_target_width, IMG_MIN_SIZE_PX, IMG_MAX_SIZE_PX);
-  ok &= json_get_size_t(json, "image_target_height", &cfg->image_target_height, IMG_MIN_SIZE_PX, IMG_MAX_SIZE_PX);
+  ok &= json_get_size_t(json, "image_target_width", &cfg->image_target_width,
+                        IMG_MIN_SIZE_PX, IMG_MAX_SIZE_PX);
+  ok &= json_get_size_t(json, "image_target_height", &cfg->image_target_height,
+                        IMG_MIN_SIZE_PX, IMG_MAX_SIZE_PX);
   ok &= json_get_bool(json, "image_embed_qr", &cfg->image_embed_qr);
-  ok &= json_get_bool(json, "image_request_standalone_qr", &cfg->image_request_standalone_qr);
-  ok &= json_get_bool(json, "image_request_metadata", &cfg->image_request_metadata);
+  ok &= json_get_bool(json, "image_request_standalone_qr",
+                      &cfg->image_request_standalone_qr);
+  ok &= json_get_bool(json, "image_request_metadata",
+                      &cfg->image_request_metadata);
   ok &= json_get_strdup(json, "www_svc_url", &cfg->www_svc_url);
   ok &= json_get_strdup(json, "www_client_id", &cfg->www_client_id);
   ok &= json_get_strdup(json, "shm_image_file_name", &cfg->shm_image_file_name);
-  ok &= json_get_size_t(json, "shm_image_max_size_bytes", &cfg->shm_image_max_size_bytes, SHM_IMAGE_MIN_SIZE_BYTES, SHM_IMAGE_MAX_SIZE_BYTES);
+  ok &= json_get_size_t(json, "shm_image_max_size_bytes",
+                        &cfg->shm_image_max_size_bytes,
+                        SHM_IMAGE_MIN_SIZE_BYTES, SHM_IMAGE_MAX_SIZE_BYTES);
   ok &= json_get_bool(json, "shm_leak_file", &cfg->shm_leak_file);
   ok &= json_get_strdup(json, "shm_leak_image_path", &cfg->shm_leak_image_path);
-  ok &= json_get_strdup(json, "image_render_proc_name", &cfg->image_render_proc_name);
-  ok &= json_get_size_t(json, "slideshow_sleep_time_sec", &cfg->slideshow_sleep_time_sec, SLIDESHOW_SLEEP_TIME_SEC_MIN, SLIDESHOW_SLEEP_TIME_SEC_MAX);
+  ok &= json_get_strdup(json, "image_render_proc_name",
+                        &cfg->image_render_proc_name);
+  ok &= json_get_size_t(
+      json, "slideshow_sleep_time_sec", &cfg->slideshow_sleep_time_sec,
+      SLIDESHOW_SLEEP_TIME_SEC_MIN, SLIDESHOW_SLEEP_TIME_SEC_MAX);
   ok &= json_get_bool(json, "eink_mock_display", &cfg->eink_mock_display);
-  ok &= json_get_optional_strdup(json, "eink_save_render_to_png_file", &cfg->eink_save_render_to_png_file);
+  ok &= json_get_optional_strdup(json, "eink_save_render_to_png_file",
+                                 &cfg->eink_save_render_to_png_file);
   if (!ok) {
     goto err;
   }
@@ -113,6 +123,7 @@ void ambiencesvc_config_print(struct AmbienceSvcConfig *h) {
   printf("\timage_render_proc_name=%s,\n", h->image_render_proc_name);
   printf("\tslideshow_sleep_time_sec=%zu,\n", h->slideshow_sleep_time_sec);
   printf("\teink_mock_display=%d,\n", h->eink_mock_display);
-  printf("\teink_save_render_to_png_file=%s,\n", h->eink_save_render_to_png_file);
+  printf("\teink_save_render_to_png_file=%s,\n",
+         h->eink_save_render_to_png_file);
   printf("}\n");
 }

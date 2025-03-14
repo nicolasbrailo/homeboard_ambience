@@ -1,5 +1,5 @@
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 struct AmbienceSvcConfig {
   // Target width and height for requested image
@@ -45,7 +45,7 @@ struct AmbienceSvcConfig {
   bool eink_mock_display;
 
   // Save Ink image to file
-  const char* eink_save_render_to_png_file;
+  const char *eink_save_render_to_png_file;
 };
 
 struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath);
