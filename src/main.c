@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 atomic_bool g_user_intr = false;
 int g_img_render_pid = -1;
@@ -24,18 +25,12 @@ void handle_user_intr(int sig) { g_user_intr = true; }
 #include "json.h"
 #include <json-c/json.h>
 
-void foo(const char *meta_json, const void *qr_ptr, size_t qr_sz) {
-  json_object *jobj = json_tokener_parse(meta_json);
+json_object* parse_meta(const char *meta_json) {
+  json_object *jobj = meta_json? json_tokener_parse(meta_json) : NULL;
   if (jobj == NULL) {
     fprintf(stderr, "Error parsing JSON string\n");
-    return;
+    return NULL;
   }
-
-  const char *meta_keys[] = {"EXIF DateTimeOriginal", "albumname",
-                             "reverse_geo.revgeo"};
-  const size_t meta_keys_sz = 3;
-  // const char *meta_keys[] = {"reverse_geo.revgeo"};
-  // const size_t meta_keys_sz = 1;
 
   struct json_object *remotepath;
   if (json_object_object_get_ex(jobj, "local_path", &remotepath)) {
@@ -45,42 +40,84 @@ void foo(const char *meta_json, const void *qr_ptr, size_t qr_sz) {
     printf("Received unknown file %s\n", meta_json);
   }
 
-  cairo_t *cr = eink_get_cairo(g_eink);
-  cairo_surface_t *surface = cairo_get_target(cr);
+  return jobj;
+}
 
-  const size_t width = cairo_image_surface_get_width(surface);
-  const size_t height = cairo_image_surface_get_height(surface);
+void cairo_render_meta(cairo_t* cr, json_object* jobj) {
+  cairo_surface_t *surface = cairo_get_target(cr);
 
   // Set text properties (black, fully opaque)
   cairo_set_source_rgba(cr, 0, 0, 0, 1);
   cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL,
-                         CAIRO_FONT_WEIGHT_BOLD);
-  cairo_set_font_size(cr, 12);
+                         CAIRO_FONT_WEIGHT_NORMAL);
+  cairo_set_font_size(cr, 14);
 
-  size_t y = 1;
-  for (size_t i = 0; i < meta_keys_sz; ++i) {
-    const char *v = json_get_nested_key(jobj, meta_keys[i]);
-    if (v) {
-      const size_t rendered_lns = cairo_render_text(cr, v, y);
-      y += rendered_lns;
+  if (jobj) {
+    size_t y = 1;
+    for (size_t i = 0; i < g_cfg->image_metadata_keys_count; ++i) {
+      const char *v = json_get_nested_key(jobj, g_cfg->image_metadata_keys[i]);
+      if (v) {
+        const size_t rendered_lns = cairo_render_text(cr, v, y);
+        y += rendered_lns;
+      }
     }
+  } else {
+    cairo_render_text(cr, "Error: failed to load metadata", 1);
   }
 
-  // Draw rectangle around box
-  cairo_set_line_width(cr, 2);
-  cairo_rectangle(cr, 0, 0, width, height);
-  cairo_stroke(cr);
+  /* Draw rectangle around box {
+    const size_t width = cairo_image_surface_get_width(surface);
+    const size_t height = cairo_image_surface_get_height(surface);
+    cairo_set_line_width(cr, 2);
+    cairo_rectangle(cr, 0, 0, width, height);
+    cairo_stroke(cr);
+  } */
 
-  eink_render(g_eink);
+  /* Draw a clock */ {
+    time_t tt;
+    time(&tt);
+    struct tm *ti = localtime(&tt);
+    char buff[6];
+    snprintf(buff, 6, "%02d:%02d", ti->tm_hour, ti->tm_min);
 
-  exit(0);
+    // Set clock font
+    cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_BOLD);
+    cairo_set_font_size(cr, 24);
+
+    // Figure out size
+    cairo_text_extents_t extents;
+    cairo_text_extents(cr, buff, &extents);
+
+    // I'm sure there is a way to have less magic numbers, but this works for now
+    const size_t margin = 5;
+    const size_t img_width = cairo_image_surface_get_width(surface);
+    const size_t img_height = cairo_image_surface_get_height(surface);
+    const size_t clock_x_i = img_width - extents.width - margin;
+    const size_t clock_y_i = img_height - extents.height + (extents.height / 2);
+
+    cairo_move_to(cr, clock_x_i, clock_y_i);
+    cairo_show_text(cr, buff);
+
+    cairo_set_line_width(cr, 2);
+    cairo_rectangle(cr, clock_x_i - margin, clock_y_i - extents.height - margin, extents.width + 2*margin, extents.height + 2*margin);
+    cairo_stroke(cr);
+  }
 }
 
-void on_image_received(const void *img_ptr, size_t img_sz, const char *meta_ptr,
-                       size_t meta_sz, const void *qr_ptr, size_t qr_sz) {
-  printf("Received new image%s%s\n", meta_ptr ? ": " : "",
-         meta_ptr ? meta_ptr : "");
-  foo(meta_ptr, qr_ptr, qr_sz);
+void eink_render_meta(struct EInkDisplay *eink, const char* meta_json) {
+  cairo_t *cr = eink_get_cairo(eink);
+  json_object *meta = parse_meta(meta_json);
+  cairo_render_meta(cr, meta);
+  eink_render(eink);
+}
+
+void on_image_received(const void* img_ptr, size_t img_sz,
+                       const char* meta_ptr, size_t meta_sz,
+                       const void* qr_ptr, size_t qr_sz) {
+  if (g_cfg->image_request_metadata) {
+    eink_render_meta(g_eink, meta_ptr);
+  }
 
   if (shm_update(g_shm, img_ptr, img_sz) < 0) {
     fprintf(stderr, "Failed to update shm with received image\n");

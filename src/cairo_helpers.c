@@ -34,7 +34,7 @@ static double get_ln_height(cairo_t *cr) {
   return extents.height;
 }
 
-void prn(cairo_t *cr, double render_x, double render_y, const char *text,
+static void cairo_println(cairo_t *cr, double render_x, double render_y, const char *text,
          size_t i, size_t f) {
   const size_t sz = f - i;
   char buff[sz + 1];
@@ -65,7 +65,7 @@ size_t cairo_render_text(cairo_t *cr, const char *text, size_t ln_offset) {
       next_space_pos += 1;
     } else if (text[next_space_pos] == '\0') {
       // End of text, print remaining
-      prn(cr, MARGIN, (rendered_lines + ln_offset) * LN_HEIGHT, text, ln_start,
+      cairo_println(cr, MARGIN, (rendered_lines + ln_offset) * LN_HEIGHT, text, ln_start,
           next_space_pos);
       rendered_lines++;
     } else {
@@ -79,7 +79,7 @@ size_t cairo_render_text(cairo_t *cr, const char *text, size_t ln_offset) {
         next_space_pos = prev_space_pos;
       }
 
-      prn(cr, MARGIN, (rendered_lines + ln_offset) * LN_HEIGHT, text, ln_start,
+      cairo_println(cr, MARGIN, (rendered_lines + ln_offset) * LN_HEIGHT, text, ln_start,
           next_space_pos);
       rendered_lines++;
 
