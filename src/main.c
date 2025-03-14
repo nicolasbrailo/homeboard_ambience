@@ -1,9 +1,11 @@
+#include "cairo_helpers.h"
 #include "config.h"
 #include "libeink/eink.h"
 #include "libwwwslide/wwwslider.h"
 #include "proc_utils.h"
 #include "shm.h"
 
+#include <cairo/cairo.h>
 #include <signal.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -19,83 +21,25 @@ struct EInkDisplay *g_eink = NULL;
 
 void handle_user_intr(int sig) { g_user_intr = true; }
 
-
-#include <json-c/json.h>
 #include "json.h"
+#include <json-c/json.h>
 
-#include <cairo/cairo.h>
-#include <ctype.h>
-
-#define MAX_LINE_LENGTH 200 // Max length of text before wrapping, you can adjust this.
-
-size_t render_text_to_surface(cairo_t *cr, const char *text, double x, double y, double max_width) {
-    cairo_text_extents_t extents;
-    double current_x = x;
-    double current_y = y;
-
-    // Split the input text into words and handle line breaks manually
-    const char *start = text;
-    const char *word = start;
-    char line[MAX_LINE_LENGTH];
-    line[0] = '\0'; // Initialize line buffer
-    size_t rendered_lines = 0;
-
-    while (*word != '\0') {
-        // Move to the next word (skip leading spaces)
-        while (*word && isspace(*word)) word++;
-
-        // Find the end of the current word
-        const char *end = word;
-        while (*end && !isspace(*end)) end++;
-
-        // Copy the word to line
-        size_t word_len = end - word;
-        strncat(line, word, word_len);
-        line[strlen(line)] = '\0';
-
-        // Measure the line's width with Cairo
-        cairo_text_extents(cr, line, &extents);
-
-        // Check if the line fits within the max width
-        if (extents.width > max_width) {
-            // Line doesn't fit, so render the current line and reset it for the next line
-            cairo_move_to(cr, current_x, current_y);
-            cairo_show_text(cr, line);
-            rendered_lines++;
-            current_y += extents.height + 2;  // Adjust vertical spacing between lines
-
-            // Start a new line with the current word
-            strcpy(line, "");
-            strncat(line, word, word_len);
-        }
-
-        // Move to the next word
-        word = end;
-    }
-
-    // Render the last line
-    if (strlen(line) > 0) {
-        cairo_move_to(cr, current_x, current_y);
-        cairo_show_text(cr, line);
-        rendered_lines++;
-    }
-
-    return rendered_lines;
-}
-
-void foo(const char* meta_json, const void *qr_ptr, size_t qr_sz) {
+void foo(const char *meta_json, const void *qr_ptr, size_t qr_sz) {
   json_object *jobj = json_tokener_parse(meta_json);
   if (jobj == NULL) {
     fprintf(stderr, "Error parsing JSON string\n");
     return;
   }
 
-  const char *meta_keys[] = {"EXIF DateTimeOriginal", "albumname", "reverse_geo.revgeo"};
+  const char *meta_keys[] = {"EXIF DateTimeOriginal", "albumname",
+                             "reverse_geo.revgeo"};
   const size_t meta_keys_sz = 3;
+  // const char *meta_keys[] = {"reverse_geo.revgeo"};
+  // const size_t meta_keys_sz = 1;
 
   struct json_object *remotepath;
   if (json_object_object_get_ex(jobj, "local_path", &remotepath)) {
-    const char* v = json_object_get_string(remotepath);
+    const char *v = json_object_get_string(remotepath);
     printf("Received file %s\n", v);
   } else {
     printf("Received unknown file %s\n", meta_json);
@@ -113,12 +57,12 @@ void foo(const char* meta_json, const void *qr_ptr, size_t qr_sz) {
                          CAIRO_FONT_WEIGHT_BOLD);
   cairo_set_font_size(cr, 12);
 
-  size_t y = 24;
+  size_t y = 1;
   for (size_t i = 0; i < meta_keys_sz; ++i) {
-    const char* v = json_get_nested_key(jobj, meta_keys[i]);
+    const char *v = json_get_nested_key(jobj, meta_keys[i]);
     if (v) {
-      const size_t rendered_lns = render_text_to_surface(cr, v, 5, y, width);
-      y += rendered_lns * 24;
+      const size_t rendered_lns = cairo_render_text(cr, v, y);
+      y += rendered_lns;
     }
   }
 
@@ -131,7 +75,6 @@ void foo(const char* meta_json, const void *qr_ptr, size_t qr_sz) {
 
   exit(0);
 }
-
 
 void on_image_received(const void *img_ptr, size_t img_sz, const char *meta_ptr,
                        size_t meta_sz, const void *qr_ptr, size_t qr_sz) {
@@ -157,7 +100,7 @@ void on_image_received(const void *img_ptr, size_t img_sz, const char *meta_ptr,
 int main(int argc, const char **argv) {
   struct WwwSlider *wwwslider = NULL;
 
-  const char* cfg_fpath = argc > 1? argv[1] : "config.json";
+  const char *cfg_fpath = argc > 1 ? argv[1] : "config.json";
   if (!(g_cfg = ambiencesvc_config_init(cfg_fpath))) {
     goto err;
   }
@@ -171,8 +114,8 @@ int main(int argc, const char **argv) {
   }
 
   struct EInkConfig eink_cfg = {
-    .mock_display = true,
-    .save_render_to_png_file = "eink.png",
+      .mock_display = true,
+      .save_render_to_png_file = "eink.png",
   };
   if (!(g_eink = eink_init(&eink_cfg))) {
     goto err;

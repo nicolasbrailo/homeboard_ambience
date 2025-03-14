@@ -39,6 +39,7 @@ CFLAGS= \
 	-Wpointer-arith \
 	-Wredundant-decls \
 	-Wstrict-aliasing=2 \
+	-Wno-typedef-redefinition \
 	-Wundef \
 	-Wuninitialized \
 
@@ -56,6 +57,7 @@ ambiencesvc: \
 		build/libeink/liblgpio/lgSPI.o \
 		build/libeink/libeink/eink.o \
 		build/json.o \
+		build/cairo_helpers.o \
 		build/config.o \
 		build/proc_utils.o \
 		build/shm.o \
