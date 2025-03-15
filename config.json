@@ -23,5 +23,7 @@
   "slideshow_sleep_time_sec": 15,
 
   "eink_mock_display": true,
-  "eink_save_render_to_png_file": "eink.png"
+  "eink_save_render_to_png_file": "eink.png",
+  "eink_hello_message": "Homeboard is waking up!",
+  "eink_goodbye_message": "Homeboard is meditating..."
 }

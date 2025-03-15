@@ -5,7 +5,7 @@ XCOMPILE=\
 	 --sysroot $(SYSROOT)
 
 # Uncomment to build to local target:
-XCOMPILE=
+#XCOMPILE=
 
 INCLUDES= \
 	-I. \
@@ -56,8 +56,8 @@ ambiencesvc: \
 		build/libeink/liblgpio/lgPthTx.o \
 		build/libeink/liblgpio/lgSPI.o \
 		build/libeink/libeink/eink.o \
+		build/libeink/libeink/cairo_helpers.o \
 		build/json.o \
-		build/cairo_helpers.o \
 		build/config.o \
 		build/proc_utils.o \
 		build/shm.o \
@@ -66,7 +66,7 @@ ambiencesvc: \
 
 clean:
 	rm -rf build
-	rm ambiencesvc
+	rm -f ambiencesvc
 
 build/%.o: %.c
 	mkdir -p $(shell dirname $@)

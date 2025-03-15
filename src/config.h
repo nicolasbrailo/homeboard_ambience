@@ -50,6 +50,8 @@ struct AmbienceSvcConfig {
 
   // Save Ink image to file
   const char *eink_save_render_to_png_file;
+  const char *eink_hello_message;
+  const char *eink_goodbye_message;
 };
 
 struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath);

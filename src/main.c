@@ -1,5 +1,5 @@
-#include "cairo_helpers.h"
 #include "config.h"
+#include "libeink/cairo_helpers.h"
 #include "libeink/eink.h"
 #include "libwwwslide/wwwslider.h"
 #include "proc_utils.h"
@@ -13,14 +13,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
-
-atomic_bool g_user_intr = false;
-int g_img_render_pid = -1;
-struct AmbienceSvcConfig *g_cfg = NULL;
-struct ShmHandle *g_shm = NULL;
-struct EInkDisplay *g_eink = NULL;
-
-void handle_user_intr(int sig) { g_user_intr = true; }
 
 #include "json.h"
 #include <json-c/json.h>
@@ -43,19 +35,19 @@ json_object* parse_meta(const char *meta_json) {
   return jobj;
 }
 
-void cairo_render_meta(cairo_t* cr, json_object* jobj) {
+void cairo_render_meta(cairo_t* cr, json_object* jobj, const char** meta_keys, size_t meta_keys_sz) {
   cairo_surface_t *surface = cairo_get_target(cr);
 
   // Set text properties (black, fully opaque)
   cairo_set_source_rgba(cr, 0, 0, 0, 1);
   cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL,
                          CAIRO_FONT_WEIGHT_NORMAL);
-  cairo_set_font_size(cr, 14);
+  cairo_set_font_size(cr, 16);
 
   if (jobj) {
     size_t y = 1;
-    for (size_t i = 0; i < g_cfg->image_metadata_keys_count; ++i) {
-      const char *v = json_get_nested_key(jobj, g_cfg->image_metadata_keys[i]);
+    for (size_t i = 0; i < meta_keys_sz; ++i) {
+      const char *v = json_get_nested_key(jobj, meta_keys[i]);
       if (v) {
         const size_t rendered_lns = cairo_render_text(cr, v, y);
         y += rendered_lns;
@@ -105,7 +97,7 @@ void cairo_render_meta(cairo_t* cr, json_object* jobj) {
   }
 }
 
-void eink_render_meta(struct EInkDisplay *eink, const char* meta_json) {
+void eink_render_meta(struct EInkDisplay *eink, const char* meta_json, const char** meta_keys, size_t meta_keys_sz) {
   cairo_t *cr = eink_get_cairo(eink);
 
   // Reset canvas
@@ -113,16 +105,25 @@ void eink_render_meta(struct EInkDisplay *eink, const char* meta_json) {
   cairo_paint(cr);
 
   json_object *meta = parse_meta(meta_json);
-  cairo_render_meta(cr, meta);
+  cairo_render_meta(cr, meta, meta_keys, meta_keys_sz);
   json_object_put(meta); // Free
   eink_render(eink);
 }
+
+
+atomic_bool g_user_intr = false;
+int g_img_render_pid = -1;
+struct AmbienceSvcConfig *g_cfg = NULL;
+struct ShmHandle *g_shm = NULL;
+struct EInkDisplay *g_eink = NULL;
+
+void handle_user_intr(int sig) { g_user_intr = true; }
 
 void on_image_received(const void* img_ptr, size_t img_sz,
                        const char* meta_ptr, size_t meta_sz,
                        const void* qr_ptr, size_t qr_sz) {
   if (g_cfg->image_request_metadata) {
-    eink_render_meta(g_eink, meta_ptr);
+    eink_render_meta(g_eink, meta_ptr, g_cfg->image_metadata_keys, g_cfg->image_metadata_keys_count);
   }
 
   if (shm_update(g_shm, img_ptr, img_sz) < 0) {
@@ -153,16 +154,23 @@ int main(int argc, const char **argv) {
 
   if (!(g_shm = shm_init(g_cfg->shm_image_file_name,
                          g_cfg->shm_image_max_size_bytes))) {
+    fprintf(stderr, "Can't initialize shm\n");
     goto err;
   }
 
   struct EInkConfig eink_cfg = {
-      .mock_display = true,
-      .save_render_to_png_file = "eink.png",
+      .mock_display = g_cfg->eink_mock_display,
+      .save_render_to_png_file = g_cfg->eink_save_render_to_png_file,
   };
   if (!(g_eink = eink_init(&eink_cfg))) {
+    fprintf(stderr, "Can't initialize eInk display\n");
     goto err;
   }
+
+  // The eInk display takes a second to refresh, so displaying a message on
+  // startup means the first metadata will be skipped, if it comes up fast
+  // enough
+  // eink_quick_announce(g_eink, g_cfg->eink_hello_message, 36);
 
   struct WwwSliderConfig wcfg = {
       .target_width = g_cfg->image_target_width,
@@ -200,6 +208,7 @@ int main(int argc, const char **argv) {
 
   printf("Shutting down ambiencesvc...\n");
   if (g_cfg->shm_leak_file) {
+    printf("Updating ambience image with %s\n", g_cfg->shm_leak_image_path);
     if (shm_update_from_file(g_shm, g_cfg->shm_leak_image_path) <= 0) {
       fprintf(stderr,
               "Failed to update shm file with %s pre-shutdown, contents not "
@@ -210,6 +219,9 @@ int main(int argc, const char **argv) {
   } else {
     shm_free(g_shm);
   }
+
+  printf("eInk announce: %s\n", g_cfg->eink_goodbye_message);
+  eink_quick_announce(g_eink, g_cfg->eink_goodbye_message, 36);
 
   ambiencesvc_config_free(g_cfg);
   wwwslider_free(wwwslider);

@@ -66,6 +66,7 @@ struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath) {
   struct json_object *json = NULL;
   struct AmbienceSvcConfig *cfg = malloc(sizeof(struct AmbienceSvcConfig));
   if (!cfg) {
+    fprintf(stderr, "Config err: bad alloc\n");
     goto err;
   }
 
@@ -77,9 +78,12 @@ struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath) {
   cfg->shm_leak_image_path = NULL;
   cfg->image_render_proc_name = NULL;
   cfg->eink_save_render_to_png_file = NULL;
+  cfg->eink_hello_message = NULL;
+  cfg->eink_goodbye_message = NULL;
 
   json = json_init(fpath);
   if (!json) {
+    fprintf(stderr, "Config err: failed to open or parse %s\n", fpath);
     goto err;
   }
 
@@ -109,9 +113,17 @@ struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath) {
       json, "slideshow_sleep_time_sec", &cfg->slideshow_sleep_time_sec,
       SLIDESHOW_SLEEP_TIME_SEC_MIN, SLIDESHOW_SLEEP_TIME_SEC_MAX);
   ok &= json_get_bool(json, "eink_mock_display", &cfg->eink_mock_display);
-  ok &= json_get_optional_strdup(json, "eink_save_render_to_png_file",
+
+  // Ignore failure, this is an optional key
+  cfg->eink_save_render_to_png_file = NULL;
+  json_get_optional_strdup(json, "eink_save_render_to_png_file",
                                  &cfg->eink_save_render_to_png_file);
+
+  ok &= json_get_strdup(json, "eink_hello_message", &cfg->eink_hello_message);
+  ok &= json_get_strdup(json, "eink_goodbye_message", &cfg->eink_goodbye_message);
+
   if (!ok) {
+    fprintf(stderr, "Config err: can't parse config\n");
     goto err;
   }
 
@@ -155,6 +167,8 @@ void ambiencesvc_config_free(struct AmbienceSvcConfig *h) {
   free((void *)h->shm_leak_image_path);
   free((void *)h->image_render_proc_name);
   free((void*)h->eink_save_render_to_png_file);
+  free((void*)h->eink_hello_message);
+  free((void*)h->eink_goodbye_message);
   free(h);
 }
 
@@ -181,5 +195,7 @@ void ambiencesvc_config_print(struct AmbienceSvcConfig *h) {
   printf("\teink_mock_display=%d,\n", h->eink_mock_display);
   printf("\teink_save_render_to_png_file=%s,\n",
          h->eink_save_render_to_png_file);
+  printf("\teink_hello_message=%s,\n", h->eink_hello_message);
+  printf("\teink_goodbye_message=%s,\n", h->eink_goodbye_message);
   printf("}\n");
 }
