@@ -107,6 +107,11 @@ void cairo_render_meta(cairo_t* cr, json_object* jobj) {
 
 void eink_render_meta(struct EInkDisplay *eink, const char* meta_json) {
   cairo_t *cr = eink_get_cairo(eink);
+
+  // Reset canvas
+  cairo_set_source_rgba(cr, 0, 0, 0, 0);
+  cairo_paint(cr);
+
   json_object *meta = parse_meta(meta_json);
   cairo_render_meta(cr, meta);
   json_object_put(meta); // Free

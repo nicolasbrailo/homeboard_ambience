@@ -154,6 +154,7 @@ void ambiencesvc_config_free(struct AmbienceSvcConfig *h) {
   free((void *)h->shm_image_file_name);
   free((void *)h->shm_leak_image_path);
   free((void *)h->image_render_proc_name);
+  free((void*)h->eink_save_render_to_png_file);
   free(h);
 }
 
