@@ -109,6 +109,7 @@ void eink_render_meta(struct EInkDisplay *eink, const char* meta_json) {
   cairo_t *cr = eink_get_cairo(eink);
   json_object *meta = parse_meta(meta_json);
   cairo_render_meta(cr, meta);
+  json_object_put(meta); // Free
   eink_render(eink);
 }
 

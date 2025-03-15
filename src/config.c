@@ -129,6 +129,7 @@ struct AmbienceSvcConfig *ambiencesvc_config_init(const char *fpath) {
     goto err;
   }
 
+  json_free(json);
   return cfg;
 
 err:
@@ -142,9 +143,16 @@ void ambiencesvc_config_free(struct AmbienceSvcConfig *h) {
     return;
   }
 
+  if (h->image_metadata_keys) {
+    for (size_t i = 0; i < h->image_metadata_keys_count; ++i) {
+      free((void*)h->image_metadata_keys[i]);
+    }
+    free(h->image_metadata_keys);
+  }
   free((void *)h->www_svc_url);
   free((void *)h->www_client_id);
   free((void *)h->shm_image_file_name);
+  free((void *)h->shm_leak_image_path);
   free((void *)h->image_render_proc_name);
   free(h);
 }
